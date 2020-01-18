@@ -6,6 +6,8 @@ In this example the `hello-client` load balances requests for `10` hello message
 ## Building the Example
 Run the following command to build the example:
 
+    ./gradlew clean build
+
 ## Running the Example:
 Follow the steps below to run the example:
 
