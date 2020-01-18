@@ -19,7 +19,7 @@ public class HelloClient {
         final String name = recipientName(args);
         final Collection<ServiceDefinition> services = serviceDefinitions(args);
 
-        
+
     }
 
     /**
@@ -64,7 +64,7 @@ public class HelloClient {
     }
 
     /**
-     *
+     * Holds the host and port information for services to add to the load balancer.
      */
     static class ServiceDefinition {
         private final String host;
