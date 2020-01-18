@@ -1,0 +1,4 @@
+rootProject.name = 'rsocket-loadbalancing-example'
+include 'hello-client'
+include 'hello-service'
+
