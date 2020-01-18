@@ -60,6 +60,9 @@ Follow the steps below to run the example:
        [reactor-tcp-nio-2] INFO example.hello.client.HelloClient - Response: Hello, Bob! from hello-service2
        [reactor-tcp-nio-2] INFO example.hello.client.HelloClient - Done
    
+   Notice that the requests are not evenly distributed amongst the service instances. This is because the load balancer uses intelligent
+   routing to direct traffic to the least latent instance.
+   
 ## License
 MIT License
 
