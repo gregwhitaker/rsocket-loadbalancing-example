@@ -59,7 +59,7 @@ public class HelloService {
      */
     private static String serviceName(String... args) {
         if (args.length != 2) {
-            throw new IllegalArgumentException("Missing command line argument(s).");
+            throw new IllegalArgumentException("Command line arguments should be of length 2.");
         }
 
         return args[0];
@@ -73,7 +73,7 @@ public class HelloService {
      */
     private static Integer port(String... args) {
         if (args.length != 2) {
-            throw new IllegalArgumentException("Missing command line argument(s).");
+            throw new IllegalArgumentException("Command line arguments should be of length 2.");
         }
 
         return Integer.parseInt(args[1]);
