@@ -53,7 +53,7 @@ public class HelloClient {
 
         // Sending 10 requests in a row
         Flux.range(1, 10)
-                .delayElements(Duration.ofSeconds(10))
+                .delayElements(Duration.ofSeconds(1))
                 .flatMap(cnt -> loadBalancer.flatMap(rSocket -> {
                   LOG.info("Sending Request {}", cnt);
 

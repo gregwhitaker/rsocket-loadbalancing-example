@@ -5,6 +5,10 @@ Run the following command to build the example:
 
 ## Running the Example:
 
+./gradlew :hello-service:run --args="hello-service1 7000"
+./gradlew :hello-service:run --args="hello-service2 7001"
+
+./gradlew :hello-client:run --args="Bob localhost:7000,localhost:7001"
 
 ## License
 MIT License
