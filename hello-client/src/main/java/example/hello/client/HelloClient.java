@@ -8,6 +8,7 @@ import io.rsocket.util.DefaultPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -15,6 +16,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 /**
  * Client that load balances requests for hello messages across multiple instances
@@ -28,15 +30,19 @@ public class HelloClient {
         final Collection<ServiceDefinition> services = serviceDefinitions(args);
 
         // Populate RSocketSuppliers with the services to load balance across
-        Collection<RSocketSupplier> rSocketSuppliers = new HashSet<>();
-        services.forEach(serviceDefinition -> {
-            rSocketSuppliers.add(new RSocketSupplier(() -> {
-                return RSocketFactory.connect()
-                        .transport(TcpClientTransport.create(serviceDefinition.host, serviceDefinition.port))
-                        .start()
-                        .doOnSubscribe(subscription -> LOG.info("Connected to hello-service at '{}:{}'", serviceDefinition.host, serviceDefinition.port));
-            }));
-        });
+        Set<RSocketSupplier> rSocketSuppliers = new HashSet<>();
+        rSocketSuppliers.addAll(services.stream()
+                .map(serviceDefinition -> {
+                    return new RSocketSupplier(() -> {
+                        return Mono.just(RSocketFactory.connect()
+                                .transport(TcpClientTransport.create(serviceDefinition.host, serviceDefinition.port))
+                                .start()
+                                .doOnSubscribe(subscription -> LOG.info("Connected to hello-service at '{}:{}'", serviceDefinition.host, serviceDefinition.port))
+                                .block()
+                        );
+                    });
+                })
+                .collect(Collectors.toSet()));
 
         // Create a load balancer
         LoadBalancedRSocketMono loadBalancer = LoadBalancedRSocketMono
