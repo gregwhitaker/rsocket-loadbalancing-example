@@ -40,7 +40,7 @@ public class HelloClient {
 
         // Create a load balancer
         LoadBalancedRSocketMono loadBalancer = LoadBalancedRSocketMono
-                .create(Flux.just(rSocketSuppliers));
+                .create(Flux.just(rSocketSuppliers).repeat());
 
         CountDownLatch latch = new CountDownLatch(10);
 
