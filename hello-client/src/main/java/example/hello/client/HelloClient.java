@@ -1,16 +1,13 @@
 package example.hello.client;
 
-import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
 import io.rsocket.client.LoadBalancedRSocketMono;
 import io.rsocket.client.filter.RSocketSupplier;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.DefaultPayload;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -18,8 +15,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Client that load balances requests for hello messages across multiple instances
@@ -47,21 +42,21 @@ public class HelloClient {
         LoadBalancedRSocketMono loadBalancer = LoadBalancedRSocketMono
                 .create(Flux.just(rSocketSuppliers));
 
-        CountDownLatch latch = new CountDownLatch(1000);
+        CountDownLatch latch = new CountDownLatch(100);
 
-        // Sending 10 requests
-        Flux.range(1, 1000)
+        // Sending 10 requests in a row
+        Flux.range(1, 100)
                 .delayElements(Duration.ofSeconds(1))
-                .subscribe(cnt -> {
-                    loadBalancer.flatMap(rSocket -> {
-                        LOG.info("Sending Request: {}", cnt);
-                        return rSocket.requestResponse(DefaultPayload.create(name));
-                    })
-                    .retryBackoff(3, Duration.ofSeconds(10))
-                    .subscribe(payload -> {
-                        LOG.info("Response: {}", payload.getDataUtf8());
-                        latch.countDown();
-                    });
+                .flatMap(cnt -> loadBalancer.flatMap(rSocket -> {
+                    LOG.info("Sending Request {}", cnt);
+
+                    // Sending the request
+                    return rSocket.requestResponse(DefaultPayload.create(name));
+                }).retry())
+                .doOnComplete(() -> LOG.info("Done"))
+                .subscribe(payload -> {
+                    LOG.info("Response: {}", payload.getDataUtf8());
+                    latch.countDown();
                 });
 
         latch.await();
