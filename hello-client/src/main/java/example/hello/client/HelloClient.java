@@ -1,10 +1,12 @@
 package example.hello.client;
 
+import io.rsocket.Payload;
 import io.rsocket.RSocketFactory;
 import io.rsocket.client.LoadBalancedRSocketMono;
 import io.rsocket.client.filter.RSocketSupplier;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.util.DefaultPayload;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -16,6 +18,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -30,39 +33,35 @@ public class HelloClient {
         final Collection<ServiceDefinition> services = serviceDefinitions(args);
 
         // Populate RSocketSuppliers with the services to load balance across
-        Set<RSocketSupplier> rSocketSuppliers = new HashSet<>();
-        rSocketSuppliers.addAll(services.stream()
-                .map(serviceDefinition -> {
-                    return new RSocketSupplier(() -> {
-                        return Mono.just(RSocketFactory.connect()
-                                .transport(TcpClientTransport.create(serviceDefinition.host, serviceDefinition.port))
-                                .start()
-                                .doOnSubscribe(subscription -> LOG.info("Connected to hello-service at '{}:{}'", serviceDefinition.host, serviceDefinition.port))
-                                .block()
-                        );
-                    });
-                })
-                .collect(Collectors.toSet()));
+        Collection<RSocketSupplier> rSocketSuppliers = new HashSet<>();
+        services.forEach(serviceDefinition -> {
+            rSocketSuppliers.add(new RSocketSupplier(() -> {
+                return RSocketFactory.connect()
+                        .transport(TcpClientTransport.create(serviceDefinition.host, serviceDefinition.port))
+                        .start()
+                        .doOnSubscribe(subscription -> LOG.info("Connected to hello-service at '{}:{}'", serviceDefinition.host, serviceDefinition.port));
+            }));
+        });
 
         // Create a load balancer
         LoadBalancedRSocketMono loadBalancer = LoadBalancedRSocketMono
                 .create(Flux.just(rSocketSuppliers));
 
-        CountDownLatch latch = new CountDownLatch(10);
+        CountDownLatch latch = new CountDownLatch(1000);
 
-        // Sending 10 requests in a row
-        Flux.range(1, 10)
+        // Sending 10 requests
+        Flux.range(1, 1000)
                 .delayElements(Duration.ofSeconds(1))
-                .flatMap(cnt -> loadBalancer.flatMap(rSocket -> {
-                  LOG.info("Sending Request {}", cnt);
-
-                    // Sending the request
-                    return rSocket.requestResponse(DefaultPayload.create(name));
-                }))
-                .doOnComplete(() -> LOG.info("Done"))
-                .subscribe(payload -> {
-                    LOG.info("Response: {}", payload.getDataUtf8());
-                    latch.countDown();
+                .subscribe(cnt -> {
+                    loadBalancer.flatMap(rSocket -> {
+                        LOG.info("Sending Request: {}", cnt);
+                        return rSocket.requestResponse(DefaultPayload.create(name));
+                    })
+                    .retryBackoff(3, Duration.ofSeconds(10))
+                    .subscribe(payload -> {
+                        LOG.info("Response: {}", payload.getDataUtf8());
+                        latch.countDown();
+                    });
                 });
 
         latch.await();
