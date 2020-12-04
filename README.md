@@ -1,4 +1,6 @@
 # rsocket-loadbalancing-example
+![Build](https://github.com/gregwhitaker/rsocket-loadbalancing-example/workflows/Build/badge.svg)
+
 An example of load-balancing requests across multiple [RSocket](http://rsocket.io) services.
 
 In this example the `hello-client` load balances requests for `10` hello messages across two instances of the `hello-service`.
